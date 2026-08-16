@@ -1,0 +1,340 @@
+@import "tailwindcss";
+
+/* ================================
+   TAILWIND THEME
+================================ */
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+/* ================================
+   BASE
+================================ */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      "Roboto",
+      "Oxygen",
+      "Ubuntu",
+      "Cantarell",
+      "Fira Sans",
+      "Droid Sans",
+      "Helvetica Neue",
+      sans-serif;
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  code {
+    font-family:
+      source-code-pro,
+      Menlo,
+      Monaco,
+      Consolas,
+      "Courier New",
+      monospace;
+  }
+}
+
+/* ================================
+   COMPONENTS
+================================ */
+
+@layer components {
+  /* Form field */
+
+  .field {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition;
+    @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-100;
+  }
+
+  /* Buttons */
+
+  .primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg;
+    @apply bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white;
+    @apply shadow-sm transition hover:bg-blue-700;
+  }
+
+  .secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg;
+    @apply border border-slate-200 bg-white px-4 py-2.5;
+    @apply text-sm font-semibold text-slate-700 transition;
+    @apply hover:bg-slate-50;
+  }
+
+  /* Icon button */
+
+  .icon {
+    @apply inline-grid h-9 w-9 place-items-center rounded-lg;
+    @apply text-slate-500 transition;
+    @apply hover:bg-slate-100 hover:text-slate-800;
+  }
+
+  /* Sidebar */
+
+  .side-link {
+    @apply flex w-full items-center gap-3 rounded-lg px-3 py-3;
+    @apply text-sm font-medium text-slate-300 transition;
+    @apply hover:bg-white/10 hover:text-white;
+  }
+
+  .side-link.active {
+    @apply bg-blue-600 text-white;
+    @apply shadow-lg shadow-blue-950/20;
+  }
+
+  /* Cards */
+
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white;
+    @apply shadow-sm shadow-slate-200/30;
+  }
+
+  .card-head {
+    @apply flex items-center justify-between;
+    @apply border-b border-slate-100 px-5 py-4;
+  }
+
+  .card-head h2 {
+    @apply font-bold text-slate-900;
+  }
+
+  .card-head p {
+    @apply mt-1 text-xs text-slate-400;
+  }
+
+  /* Statistics */
+
+  .stat-icon {
+    @apply grid h-10 w-10 place-items-center rounded-xl;
+  }
+
+  .stat-icon.blue {
+    @apply bg-blue-50 text-blue-600;
+  }
+
+  .stat-icon.green {
+    @apply bg-emerald-50 text-emerald-600;
+  }
+
+  .stat-icon.orange {
+    @apply bg-orange-50 text-orange-600;
+  }
+
+  .stat-icon.purple {
+    @apply bg-violet-50 text-violet-600;
+  }
+
+  /* Badges */
+
+  .badge {
+    @apply inline-flex rounded-full px-2.5 py-1;
+    @apply text-[11px] font-semibold;
+  }
+
+  .badge.blue {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .badge.success {
+    @apply bg-emerald-50 text-emerald-700;
+  }
+
+  .badge.warning {
+    @apply bg-amber-50 text-amber-700;
+  }
+
+  .badge.danger {
+    @apply bg-red-50 text-red-700;
+  }
+
+  /* Avatar */
+
+  .avatar {
+    @apply grid h-10 w-10 shrink-0 place-items-center rounded-full;
+    @apply bg-blue-100 font-semibold uppercase text-blue-700;
+  }
+
+  .avatar.small {
+    @apply h-8 w-8 text-xs;
+  }
+
+  /* Section label */
+
+  .section-label {
+    @apply text-xs font-bold uppercase tracking-wider text-slate-400;
+  }
+
+  /* WhatsApp */
+
+  .whatsapp {
+    @apply inline-flex items-center gap-1.5 rounded-lg;
+    @apply bg-emerald-50 px-2.5 py-1.5;
+    @apply text-xs font-semibold text-emerald-700;
+    @apply hover:bg-emerald-100;
+  }
+
+  /* Status button */
+
+  .status-btn {
+    @apply rounded-lg border border-slate-200 px-3 py-2;
+    @apply text-xs font-medium text-slate-600;
+    @apply hover:border-blue-300 hover:text-blue-600;
+  }
+
+  .status-btn.selected {
+    @apply border-blue-600 bg-blue-600 text-white;
+  }
+
+  /* Small information box */
+
+  .mini {
+    @apply rounded-lg bg-slate-50 p-3;
+  }
+
+  .mini span {
+    @apply block text-xs text-slate-400;
+  }
+
+  .mini b {
+    @apply mt-1 block text-sm;
+  }
+
+  /* Tables */
+
+  table {
+    @apply w-full text-left text-sm;
+  }
+
+  th {
+    @apply whitespace-nowrap bg-slate-50 px-5 py-3;
+    @apply text-[11px] font-bold uppercase tracking-wider text-slate-400;
+  }
+
+  td {
+    @apply whitespace-nowrap border-t border-slate-100 px-5 py-4;
+  }
+
+  tbody tr {
+    @apply cursor-pointer transition hover:bg-blue-50/40;
+  }
+}
