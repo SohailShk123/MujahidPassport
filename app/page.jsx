@@ -66,9 +66,73 @@ const formatDate = (d) =>
 
 const currentDay = new Date().toISOString().slice(0, 10)
 
-const reminderMessage = (c) =>
-  `Hello ${c.fullName}, this is a reminder from PassportDesk. Your passport appointment is on ${formatDate(c.appointmentDate)} at ${c.appointmentTime || 'the scheduled time'}. File number: ${c.fileNumber}. Please bring your required documents. Thank you.`
+function getDaysUntilAppointment(date) {
+  if (!date) return null
 
+  const today = new Date()
+  const appointment = new Date(date)
+
+  // Remove time part so only dates are compared
+  today.setHours(0, 0, 0, 0)
+  appointment.setHours(0, 0, 0, 0)
+
+  const diffTime = appointment - today
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
+// const reminderMessage = (c) =>
+// `Hello ${c.fullName},
+
+// This is a reminder from PassportDesk.
+
+// Your passport appointment is on ${formatDate(c.appointmentDate)} at ${
+//     c.appointmentTime || 'the scheduled time'
+//   }.
+
+// File number: ${c.fileNumber}.
+
+// Please bring the following documents:
+// ${documentList}
+
+// Thank you.`
+const reminderMessage = (c) => {
+  const documents = Array.isArray(c.documents) ? c.documents : []
+
+  const documentList =
+    documents.length > 0
+      ? documents
+          .map((doc, index) => {
+            // Handles different possible document structures
+            const documentName =
+              typeof doc === 'string'
+                ? doc
+                : doc.name ||
+                  doc.documentName ||
+                  doc.documentType ||
+                  doc.title ||
+                  doc.fileName ||
+                  'Required document'
+
+            return `${index + 1}. ${documentName}`
+          })
+          .join('\n')
+      : 'Please bring your required documents.'
+
+  return `Hello ${c.fullName},
+
+This is a reminder from PassportDesk.
+
+Your passport appointment is on ${formatDate(c.appointmentDate)} at ${
+    c.appointmentTime || 'the scheduled time'
+  }.
+
+File number: ${c.fileNumber}.
+
+Please bring the following documents:
+${documentList}
+
+Thank you.`
+}
 function Login({ onLogin }) {
   const [form, setForm] = useState({
     username: 'admin',
@@ -918,6 +982,7 @@ function Empty({ title, text }) {
 }
 
 function Appointments({ customers, setSelected }) {
+
   return (
     <div className="card overflow-hidden">
       <div className="card-head">
@@ -987,8 +1052,108 @@ function Appointments({ customers, setSelected }) {
   )
 }
 
+// function Reminders({ customers }) {
+//   const upcoming = customers.filter((c) => c.appointmentDate)
+//   const markSent = (c) =>
+//     fetch('/api/reminders', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         customerId: c._id,
+//       }),
+//     })
+
+//   const getWhatsAppNumber = (mobile) => {
+//     const number = String(mobile || '').replace(/\D/g, '')
+
+//     // Already has India country code
+//     if (number.startsWith('91') && number.length === 12) {
+//       return number
+//     }
+
+//     // 10 digit Indian number
+//     if (number.length === 10) {
+//       return `91${number}`
+//     }
+
+//     // Number starts with 0, e.g. 09876543210
+//     if (number.length === 11 && number.startsWith('0')) {
+//       return `91${number.slice(1)}`
+//     }
+
+//     return number
+//   }
+//   return (
+//     <div className="grid xl:grid-cols-3 gap-5">
+//       {['Today', 'Tomorrow', 'In 2 days'].map((label, i) => (
+//         <div className="card" key={label}>
+//           <div className="card-head">
+//             <div>
+//               <h2>{label}</h2>
+//               <p>Appointment reminders</p>
+//             </div>
+
+//             <Bell size={18} className="text-orange-500" />
+//           </div>
+
+//           {upcoming.slice(i, i + 4).map((c) => (
+//             <div
+//               className="py-4 border-b last:border-0 border-slate-100"
+//               key={c._id}
+//             >
+//               <div className="flex justify-between gap-3">
+//                 <div>
+//                   <p className="font-semibold">{c.fullName}</p>
+
+//                   <p className="text-xs text-slate-400">
+//                     {c.fileNumber} · {formatDate(c.appointmentDate)} ·{' '}
+//                     {c.appointmentTime || 'Time not set'}
+//                   </p>
+//                 </div>
+
+//                 {c.reminderSent ? (
+//                   <span className="text-xs text-green-600 font-semibold">
+//                     Sent
+//                   </span>
+//                 ) : (
+//                   <a
+//                     target="_blank"
+//                     rel="noreferrer"
+//                     onClick={() => markSent(c)}
+//                     href={`https://wa.me/${getWhatsAppNumber(c.mobile)}?text=${encodeURIComponent(
+//                       reminderMessage(c),
+//                     )}`}
+//                     className="whatsapp"
+//                   >
+//                     <MessageCircle size={14} />
+//                     WhatsApp
+//                   </a>
+//                 )}
+//               </div>
+//             </div>
+//           ))}
+
+//           {!upcoming.length && (
+//             <Empty
+//               title="No upcoming appointments"
+//               text="Booked appointments will appear here."
+//             />
+//           )}
+//         </div>
+//       ))}
+//     </div>
+//   )
+// }
 function Reminders({ customers }) {
-  const upcoming = customers.filter((c) => c.appointmentDate)
+  const upcoming = customers.filter((c) => {
+    if (!c.appointmentDate) return false
+
+    const days = getDaysUntilAppointment(c.appointmentDate)
+
+    return days >= 0
+  })
 
   const markSent = (c) =>
     fetch('/api/reminders', {
@@ -1001,9 +1166,39 @@ function Reminders({ customers }) {
       }),
     })
 
+  const getDateLabel = (date) => {
+    const days = getDaysUntilAppointment(date)
+
+    if (days === 0) return 'Today'
+    if (days === 1) return 'Tomorrow'
+    if (days > 1) return `In ${days} days`
+
+    return 'Past appointment'
+  }
+  const getWhatsAppNumber = (mobile) => {
+    const number = String(mobile || '').replace(/\D/g, '')
+
+    // Already has India country code
+    if (number.startsWith('91') && number.length === 12) {
+      return number
+    }
+
+    // 10 digit Indian number
+    if (number.length === 10) {
+      return `91${number}`
+    }
+
+    // Number starts with 0, e.g. 09876543210
+    if (number.length === 11 && number.startsWith('0')) {
+      return `91${number.slice(1)}`
+    }
+
+    return number
+  }
+
   return (
     <div className="grid xl:grid-cols-3 gap-5">
-      {['Today', 'Tomorrow', 'In 2 days'].map((label, i) => (
+      {['Today', 'Tomorrow', 'Upcoming'].map((label) => (
         <div className="card" key={label}>
           <div className="card-head">
             <div>
@@ -1014,49 +1209,81 @@ function Reminders({ customers }) {
             <Bell size={18} className="text-orange-500" />
           </div>
 
-          {upcoming.slice(i, i + 4).map((c) => (
-            <div
-              className="py-4 border-b last:border-0 border-slate-100"
-              key={c._id}
-            >
-              <div className="flex justify-between gap-3">
-                <div>
-                  <p className="font-semibold">{c.fullName}</p>
+          {upcoming
+            .filter((c) => {
+              const days = getDaysUntilAppointment(c.appointmentDate)
 
-                  <p className="text-xs text-slate-400">
-                    {c.fileNumber} · {formatDate(c.appointmentDate)} ·{' '}
-                    {c.appointmentTime || 'Time not set'}
-                  </p>
+              if (label === 'Today') return days === 0
+              if (label === 'Tomorrow') return days === 1
+
+              return days >= 2
+            })
+            .map((c) => {
+              const days = getDaysUntilAppointment(c.appointmentDate)
+
+              return (
+                <div
+                  className="py-4 border-b last:border-0 border-slate-100"
+                  key={c._id}
+                >
+                  <div className="flex justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">
+                        {c.fullName}
+                      </p>
+
+                      <p className="text-xs text-slate-400">
+                        {c.fileNumber} ·{' '}
+                        {formatDate(c.appointmentDate)} ·{' '}
+                        {c.appointmentTime || 'Time not set'}
+                      </p>
+
+                      {/* Days remaining */}
+                      <p className="text-xs font-semibold text-orange-500 mt-1">
+                        {days === 0
+                          ? 'Appointment is today'
+                          : days === 1
+                            ? 'Appointment is tomorrow'
+                            : `${days} days remaining`}
+                      </p>
+                    </div>
+
+                    {c.reminderSent ? (
+                      <span className="text-xs text-green-600 font-semibold">
+                        Sent
+                      </span>
+                    ) : (
+                      <a
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => markSent(c)}
+                        href={`https://wa.me/${getWhatsAppNumber(c.mobile)}?text=${encodeURIComponent(
+                          reminderMessage(c),
+                        )}`}
+                        className="whatsapp"
+                      >
+                        <MessageCircle size={14} />
+                        WhatsApp
+                      </a>
+                    )}
+                  </div>
                 </div>
+              )
+            })}
 
-                {c.reminderSent ? (
-                  <span className="text-xs text-green-600 font-semibold">
-                    Sent
-                  </span>
-                ) : (
-                  <a
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => markSent(c)}
-                    href={`https://wa.me/${c.mobile}?text=${encodeURIComponent(
-                      reminderMessage(c),
-                    )}`}
-                    className="whatsapp"
-                  >
-                    <MessageCircle size={14} />
-                    WhatsApp
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
+          {upcoming.filter((c) => {
+            const days = getDaysUntilAppointment(c.appointmentDate)
 
-          {!upcoming.length && (
-            <Empty
-              title="No upcoming appointments"
-              text="Booked appointments will appear here."
-            />
-          )}
+            if (label === 'Today') return days === 0
+            if (label === 'Tomorrow') return days === 1
+
+            return days >= 2
+          }).length === 0 && (
+              <Empty
+                title={`No ${label.toLowerCase()} appointments`}
+                text="Booked appointments will appear here."
+              />
+            )}
         </div>
       ))}
     </div>
@@ -1355,8 +1582,8 @@ function CustomerDetail({ customer, close, refresh }) {
                 <span className="text-sm">{d}</span>
                 <span
                   className={`text-xs ${customer.documents?.includes(d)
-                      ? 'text-green-600'
-                      : 'text-red-600'
+                    ? 'text-green-600'
+                    : 'text-red-600'
                     }`}
                 >
                   {customer.documents?.includes(d) ? 'Submitted' : 'Not submitted'}
