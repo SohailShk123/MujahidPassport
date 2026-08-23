@@ -42,15 +42,23 @@ const statuses = [
 ]
 const documentOptions = [
   'Aadhaar Card',
+  'Verified Aadhaar',
   'PAN Card',
   'Birth Certificate',
   '10th Marksheet',
+  '10th TC',
+  '10 Sanad',
   'Address Proof',
+  'Bank Passbook',
   'Electricity Bill',
   'Previous Passport',
   'Marriage Certificate',
   'Photo',
-  'Other',
+  'Annexure - J (Joint Photo)',
+  'Annexure - D (Declaration)',
+  'Govt. Employee - Job Identity Card',
+  'Govt. Employee - Annexure - G',
+  'Govt. Employee - Annexure - C',
 ]
 
 const money = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`
@@ -101,30 +109,29 @@ const reminderMessage = (c) => {
   const documentList =
     documents.length > 0
       ? documents
-          .map((doc, index) => {
-            // Handles different possible document structures
-            const documentName =
-              typeof doc === 'string'
-                ? doc
-                : doc.name ||
-                  doc.documentName ||
-                  doc.documentType ||
-                  doc.title ||
-                  doc.fileName ||
-                  'Required document'
+        .map((doc, index) => {
+          // Handles different possible document structures
+          const documentName =
+            typeof doc === 'string'
+              ? doc
+              : doc.name ||
+              doc.documentName ||
+              doc.documentType ||
+              doc.title ||
+              doc.fileName ||
+              'Required document'
 
-            return `${index + 1}. ${documentName}`
-          })
-          .join('\n')
+          return `${index + 1}. ${documentName}`
+        })
+        .join('\n')
       : 'Please bring your required documents.'
 
   return `Hello ${c.fullName},
 
 This is a reminder from PassportDesk.
 
-Your passport appointment is on ${formatDate(c.appointmentDate)} at ${
-    c.appointmentTime || 'the scheduled time'
-  }.
+Your passport appointment is on ${formatDate(c.appointmentDate)} at ${c.appointmentTime || 'the scheduled time'
+    }.
 
 File number: ${c.fileNumber}.
 
@@ -443,23 +450,23 @@ function CustomerForm({ onSave, close }) {
         <div className="grid md:grid-cols-3 gap-4 mt-3">
           <input
             type="number"
-            placeholder="Government fee"
+            placeholder="Total amount"
             className="field"
             onChange={(e) => set('governmentFee', e.target.value)}
           />
 
-          <input
-            type="number"
-            placeholder="Service charge"
-            className="field"
-            onChange={(e) => set('serviceCharge', e.target.value)}
-          />
 
           <input
             type="number"
             placeholder="Paid amount"
             className="field"
             onChange={(e) => set('paidAmount', e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Balance amount"
+            className="field"
+            onChange={(e) => set('serviceCharge', e.target.value)}
           />
         </div>
       </div>
@@ -606,7 +613,7 @@ function App() {
 
             <h1 className="text-2xl md:text-3xl font-bold text-slate-950 mt-1">
               {page === 'dashboard'
-                ? 'Good morning, Operator'
+                ? 'Good morning, Soheb Abrar'
                 : nav.find((n) => n[0] === page)?.[1]}
             </h1>
           </div>
@@ -1166,15 +1173,6 @@ function Reminders({ customers }) {
       }),
     })
 
-  const getDateLabel = (date) => {
-    const days = getDaysUntilAppointment(date)
-
-    if (days === 0) return 'Today'
-    if (days === 1) return 'Tomorrow'
-    if (days > 1) return `In ${days} days`
-
-    return 'Past appointment'
-  }
   const getWhatsAppNumber = (mobile) => {
     const number = String(mobile || '').replace(/\D/g, '')
 
@@ -1198,94 +1196,95 @@ function Reminders({ customers }) {
 
   return (
     <div className="grid xl:grid-cols-3 gap-5">
-      {['Today', 'Tomorrow', 'Upcoming'].map((label) => (
-        <div className="card" key={label}>
-          <div className="card-head">
-            <div>
-              <h2>{label}</h2>
-              <p>Appointment reminders</p>
+      {['Today', 'Tomorrow', 'Upcoming'].map((label) => {
+        const appointments = upcoming.filter((c) => {
+          const days = getDaysUntilAppointment(c.appointmentDate)
+
+          if (label === 'Today') return days === 0
+          if (label === 'Tomorrow') return days === 1
+
+          return days >= 2
+        })
+
+        return (
+          <div className="card" key={label}>
+            <div className="card-head">
+              <div>
+                <h2>{label}</h2>
+                <p>Appointment reminders</p>
+              </div>
+
+              <Bell size={18} className="text-orange-500" />
             </div>
 
-            <Bell size={18} className="text-orange-500" />
-          </div>
+            {/* Scrollable appointment list */}
+            <div className="max-h-[400px] overflow-y-auto pr-2">
+              {appointments.map((c) => {
+                const days = getDaysUntilAppointment(
+                  c.appointmentDate,
+                )
 
-          {upcoming
-            .filter((c) => {
-              const days = getDaysUntilAppointment(c.appointmentDate)
+                return (
+                  <div
+                    className="py-4 border-b last:border-0 border-slate-100 px-2"
+                    key={c._id}
+                  >
+                    <div className="flex justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">
+                          {c.fullName}
+                        </p>
 
-              if (label === 'Today') return days === 0
-              if (label === 'Tomorrow') return days === 1
+                        <p className="text-xs text-slate-400">
+                          {c.fileNumber} ·{' '}
+                          {formatDate(c.appointmentDate)} ·{' '}
+                          {c.appointmentTime || 'Time not set'}
+                        </p>
 
-              return days >= 2
-            })
-            .map((c) => {
-              const days = getDaysUntilAppointment(c.appointmentDate)
+                        <p className="text-xs font-semibold text-orange-500 mt-1">
+                          {days === 0
+                            ? 'Appointment is today'
+                            : days === 1
+                              ? 'Appointment is tomorrow'
+                              : `${days} days remaining`}
+                        </p>
+                      </div>
 
-              return (
-                <div
-                  className="py-4 border-b last:border-0 border-slate-100"
-                  key={c._id}
-                >
-                  <div className="flex justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">
-                        {c.fullName}
-                      </p>
-
-                      <p className="text-xs text-slate-400">
-                        {c.fileNumber} ·{' '}
-                        {formatDate(c.appointmentDate)} ·{' '}
-                        {c.appointmentTime || 'Time not set'}
-                      </p>
-
-                      {/* Days remaining */}
-                      <p className="text-xs font-semibold text-orange-500 mt-1">
-                        {days === 0
-                          ? 'Appointment is today'
-                          : days === 1
-                            ? 'Appointment is tomorrow'
-                            : `${days} days remaining`}
-                      </p>
+                      {c.reminderSent ? (
+                        <span className="text-xs text-green-600 font-semibold whitespace-nowrap">
+                          Sent
+                        </span>
+                      ) : (
+                        <a
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => markSent(c)}
+                          href={`https://wa.me/${getWhatsAppNumber(
+                            c.mobile,
+                          )}?text=${encodeURIComponent(
+                            reminderMessage(c),
+                          )}`}
+                          className="whatsapp whitespace-nowrap"
+                        >
+                          <MessageCircle size={14} />
+                          WhatsApp
+                        </a>
+                      )}
                     </div>
-
-                    {c.reminderSent ? (
-                      <span className="text-xs text-green-600 font-semibold">
-                        Sent
-                      </span>
-                    ) : (
-                      <a
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={() => markSent(c)}
-                        href={`https://wa.me/${getWhatsAppNumber(c.mobile)}?text=${encodeURIComponent(
-                          reminderMessage(c),
-                        )}`}
-                        className="whatsapp"
-                      >
-                        <MessageCircle size={14} />
-                        WhatsApp
-                      </a>
-                    )}
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
 
-          {upcoming.filter((c) => {
-            const days = getDaysUntilAppointment(c.appointmentDate)
-
-            if (label === 'Today') return days === 0
-            if (label === 'Tomorrow') return days === 1
-
-            return days >= 2
-          }).length === 0 && (
-              <Empty
-                title={`No ${label.toLowerCase()} appointments`}
-                text="Booked appointments will appear here."
-              />
-            )}
-        </div>
-      ))}
+              {appointments.length === 0 && (
+                <Empty
+                  title={`No ${label.toLowerCase()} appointments`}
+                  text="Booked appointments will appear here."
+                />
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -1565,14 +1564,23 @@ function CustomerDetail({ customer, close, refresh }) {
           <div className="mt-3 space-y-2">
             {[
               'Aadhaar Card',
+              'Verified Aadhaar',
               'PAN Card',
               'Birth Certificate',
               '10th Marksheet',
+              '10th TC',
+              '10 Sanad',
               'Address Proof',
+              'Bank Passbook',
               'Electricity Bill',
               'Previous Passport',
               'Marriage Certificate',
               'Photo',
+              'Annexure - J (Joint Photo)',
+              'Annexure - D (Declaration)',
+              'Govt. Employee - Job Identity Card',
+              'Govt. Employee - Annexure - G',
+              'Govt. Employee - Annexure - C',
               'Other',
             ].map((d) => (
               <div
