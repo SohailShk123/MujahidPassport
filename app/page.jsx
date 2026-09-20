@@ -20,6 +20,9 @@ import {
   MessageCircle,
   Printer,
   MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
 } from 'lucide-react'
 
 const nav = [
@@ -105,12 +108,11 @@ function getDaysUntilAppointment(date) {
 // Thank you.`
 const reminderMessage = (c) => {
   const documents = Array.isArray(c.documents) ? c.documents : []
-
+  console.log("hello ", c)
   const documentList =
     documents.length > 0
       ? documents
         .map((doc, index) => {
-          // Handles different possible document structures
           const documentName =
             typeof doc === 'string'
               ? doc
@@ -126,14 +128,21 @@ const reminderMessage = (c) => {
         .join('\n')
       : 'Please bring your required documents.'
 
-  return `Hello ${c.fullName},
+  const balance = Math.max(
+    0,
+    Number(c.balance ?? Number(c.totalAmount || 0) - Number(c.paidAmount || 0))
+  )
 
-This is a reminder from PassportDesk.
+  return `Hello ${c.fullName}  ,
+
+This is a reminder from Mujahid (Soheb Abrar).
 
 Your passport appointment is on ${formatDate(c.appointmentDate)} at ${c.appointmentTime || 'the scheduled time'
     }.
 
 File number: ${c.fileNumber}.
+
+Remaining payment: ₹${balance.toLocaleString('en-IN')}.
 
 Please bring the following documents:
 ${documentList}
@@ -287,19 +296,37 @@ function Stat({ label, value, detail, icon: Icon, tone = 'blue' }) {
   )
 }
 
-function CustomerForm({ onSave, close }) {
+function CustomerForm({ customer, onSave, close }) {
   const [form, setForm] = useState({
-    passportType: 'Fresh',
-    status: 'New',
-    gender: 'Male',
-    documents: []
+    passportType: customer?.passportType || 'Fresh',
+    passportAmPm: customer?.passportAmPm || 'AM',
+    passportArn: customer?.passportArn || '',
+    passportFileNumber: customer?.passportFileNumber || '',
+    passportOffice: customer?.passportOffice || 'Nanded',
+    status: customer?.status || 'New',
+    gender: customer?.gender || 'Male',
+    fullName: customer?.fullName || '',
+    mobile: customer?.mobile || '',
+    alternateMobile: customer?.alternateMobile || '',
+    address: customer?.address || '',
+    dateOfBirth: customer?.dateOfBirth || '',
+    previousPassport: customer?.previousPassport || '',
+    appointmentDate: customer?.appointmentDate || '',
+    appointmentTime: customer?.appointmentTime || '',
+    governmentFee: customer?.governmentFee || '',
+    paidAmount: customer?.paidAmount || '',
+    serviceCharge: customer?.serviceCharge || '',
+    notes: customer?.notes || '',
+    documents: customer?.documents || [],
   })
 
-  const set = (k, v) =>
-    setForm({
-      ...form,
+  const set = (k, v) => {
+    setForm((prev) => ({
+      ...prev,
       [k]: v,
-    })
+    }))
+  }
+
   const toggleDocument = (document) => {
     setForm((prev) => ({
       ...prev,
@@ -308,33 +335,53 @@ function CustomerForm({ onSave, close }) {
         : [...prev.documents, document],
     }))
   }
+
   const submit = async (e) => {
     e.preventDefault()
 
-    const r = await fetch('/api/customers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(form),
-    })
+    const url = customer
+      ? `/api/customers/${customer._id}`
+      : '/api/customers'
 
-    if (r.ok) {
-      onSave(await r.json())
+    const method = customer ? 'PUT' : 'POST'
+
+    try {
+      const r = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      })
+
+      const data = await r.json()
+
+      if (!r.ok) {
+        throw new Error(data.error || data.message || 'Something went wrong')
+      }
+
+      onSave(data)
       close()
+    } catch (error) {
+      console.error(error)
+      alert(error.message)
     }
   }
 
   return (
     <form onSubmit={submit} className="space-y-6">
+
+      {/* Personal details */}
       <div>
         <p className="section-label">Personal details</p>
 
         <div className="grid md:grid-cols-2 gap-4 mt-3">
+
           <input
             required
             placeholder="Full name *"
             className="field"
+            value={form.fullName}
             onChange={(e) => set('fullName', e.target.value)}
           />
 
@@ -342,45 +389,66 @@ function CustomerForm({ onSave, close }) {
             required
             placeholder="Mobile *"
             className="field"
+            value={form.mobile}
             onChange={(e) => set('mobile', e.target.value)}
           />
 
           <input
             placeholder="Alternate mobile"
             className="field"
-            onChange={(e) => set('alternateMobile', e.target.value)}
+            value={form.alternateMobile}
+            onChange={(e) =>
+              set('alternateMobile', e.target.value)
+            }
           />
 
           <input
             placeholder="Address"
             className="field"
-            onChange={(e) => set('address', e.target.value)}
+            value={form.address}
+            onChange={(e) =>
+              set('address', e.target.value)
+            }
           />
 
           <input
             type="date"
             className="field"
-            onChange={(e) => set('dateOfBirth', e.target.value)}
+            value={form.dateOfBirth}
+            onChange={(e) =>
+              set('dateOfBirth', e.target.value)
+            }
           />
 
           <select
             className="field"
-            onChange={(e) => set('gender', e.target.value)}
+            value={form.gender}
+            onChange={(e) =>
+              set('gender', e.target.value)
+            }
           >
             <option>Male</option>
             <option>Female</option>
             <option>Other</option>
           </select>
+
         </div>
       </div>
 
+      {/* Passport & appointment */}
       <div>
-        <p className="section-label">Passport & appointment</p>
+        <p className="section-label">
+          Passport & appointment
+        </p>
 
         <div className="grid md:grid-cols-2 gap-4 mt-3">
+
           <select
             className="field"
-            onChange={(e) => set('passportType', e.target.value)}
+            value={form.passportType}
+            onChange={(e) =>
+              set('passportType', e.target.value)
+            }
           >
             <option>Fresh</option>
             <option>Renewal</option>
@@ -390,39 +458,88 @@ function CustomerForm({ onSave, close }) {
           <input
             placeholder="Previous passport number"
             className="field"
-            onChange={(e) => set('previousPassport', e.target.value)}
+            value={form.previousPassport}
+            onChange={(e) =>
+              set('previousPassport', e.target.value)
+            }
           />
 
           <input
             placeholder="Passport office"
             className="field"
-            onChange={(e) => set('passportOffice', e.target.value)}
+            value={form.passportOffice}
+            onChange={(e) =>
+              set('passportOffice', e.target.value)
+            }
+          />
+
+          <input
+            placeholder="Passport ARN Number"
+            className="field"
+            value={form.passportArn}
+            onChange={(e) =>
+              set('passportArn', e.target.value)
+            }
+          />
+
+          <input
+            placeholder="Passport File number"
+            className="field"
+            value={form.passportFileNumber}
+            onChange={(e) =>
+              set('passportFileNumber', e.target.value)
+            }
           />
 
           <input
             type="date"
             className="field"
-            onChange={(e) => set('appointmentDate', e.target.value)}
+            value={form.appointmentDate}
+            onChange={(e) =>
+              set('appointmentDate', e.target.value)
+            }
           />
 
           <input
             type="time"
             className="field"
-            onChange={(e) => set('appointmentTime', e.target.value)}
+            value={form.appointmentTime}
+            onChange={(e) =>
+              set('appointmentTime', e.target.value)
+            }
           />
 
           <select
             className="field"
-            onChange={(e) => set('status', e.target.value)}
+            value={form.passportAmPm}
+            onChange={(e) =>
+              set('passportAmPm', e.target.value)
+            }
+          >
+            <option>AM</option>
+            <option>PM</option>
+          </select>
+
+          <select
+            className="field"
+            value={form.status}
+            onChange={(e) =>
+              set('status', e.target.value)
+            }
           >
             {statuses.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
+
         </div>
       </div>
+
+      {/* Documents */}
       <div>
-        <p className="section-label">Documents submitted</p>
+        <p className="section-label">
+          Documents submitted
+        </p>
 
         <div className="grid md:grid-cols-2 gap-3 mt-3">
           {documentOptions.map((document) => (
@@ -444,48 +561,83 @@ function CustomerForm({ onSave, close }) {
           ))}
         </div>
       </div>
+
+      {/* Payment */}
       <div>
-        <p className="section-label">Payment</p>
+        <p className="section-label">
+          Payment
+        </p>
 
         <div className="grid md:grid-cols-3 gap-4 mt-3">
+
           <input
             type="number"
             placeholder="Total amount"
             className="field"
-            onChange={(e) => set('governmentFee', e.target.value)}
+            value={form.governmentFee}
+            onChange={(e) =>
+              set('governmentFee', e.target.value)
+            }
           />
-
 
           <input
             type="number"
             placeholder="Paid amount"
             className="field"
-            onChange={(e) => set('paidAmount', e.target.value)}
+            value={form.paidAmount}
+            onChange={(e) =>
+              set('paidAmount', e.target.value)
+            }
           />
+
           <input
             type="number"
             placeholder="Balance amount"
             className="field"
-            onChange={(e) => set('serviceCharge', e.target.value)}
+            value={form.serviceCharge}
+            onChange={(e) =>
+              set('serviceCharge', e.target.value)
+            }
           />
+
         </div>
       </div>
 
+      {/* Notes */}
       <textarea
         placeholder="Notes"
         className="field min-h-24"
-        onChange={(e) => set('notes', e.target.value)}
+        value={form.notes}
+        onChange={(e) =>
+          set('notes', e.target.value)
+        }
       />
 
+      {/* Buttons */}
       <div className="flex justify-end gap-3">
-        <button type="button" onClick={close} className="secondary">
+
+        <button
+          type="button"
+          onClick={close}
+          className="secondary"
+        >
           Cancel
         </button>
 
         <button className="primary">
-          <Plus size={17} />
-          Create customer
+          {customer ? (
+            <>
+              <Pencil size={17} />
+              Update customer
+            </>
+          ) : (
+            <>
+              <Plus size={17} />
+              Create customer
+            </>
+          )}
         </button>
+
       </div>
     </form>
   )
@@ -497,6 +649,7 @@ function App() {
   const [customers, setCustomers] = useState([])
   const [stats, setStats] = useState({})
   const [showAdd, setShowAdd] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState(null)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('All')
   const [selected, setSelected] = useState(null)
@@ -541,7 +694,59 @@ function App() {
       ),
     [customers, query, filter],
   )
+  const handleCreate = (customer) => {
+    setCustomers((prev) => [customer, ...prev])
+    load()
+  }
 
+  const handleUpdate = (customer) => {
+    setCustomers((prev) =>
+      prev.map((c) =>
+        c._id === customer._id ? customer : c
+      )
+    )
+
+    setSelected(null)
+    load()
+  }
+
+  const handleDelete = async (customer) => {
+    const confirmed = window.confirm(
+      `Delete ${customer.fullName}? This action cannot be undone.`
+    )
+
+    if (!confirmed) return
+
+    try {
+      const r = await fetch(
+        `/api/customers/${customer._id}`,
+        {
+          method: 'DELETE',
+        }
+      )
+
+      const data = await r.json()
+
+      if (!r.ok) {
+        throw new Error(
+          data.error || data.message || 'Failed to delete customer'
+        )
+      }
+
+      setCustomers((prev) =>
+        prev.filter((c) => c._id !== customer._id)
+      )
+
+      if (selected?._id === customer._id) {
+        setSelected(null)
+      }
+
+      load()
+    } catch (error) {
+      console.error(error)
+      alert(error.message)
+    }
+  }
   const logout = async () => {
     await fetch('/api/logout', {
       method: 'DELETE',
@@ -649,9 +854,16 @@ function App() {
             setQuery={setQuery}
             filter={filter}
             setFilter={setFilter}
-            add={() => setShowAdd(true)}
+            add={() => {
+              setEditingCustomer(null)
+              setShowAdd(true)
+            }}
             setSelected={setSelected}
-            onRefresh={load}
+            onEdit={(customer) => {
+              setEditingCustomer(customer)
+              setShowAdd(true)
+            }}
+            onDelete={handleDelete}
           />
         )}
 
@@ -671,15 +883,27 @@ function App() {
 
         {showAdd && (
           <Modal
-            title="Add new customer"
-            close={() => setShowAdd(false)}
+            title={
+              editingCustomer
+                ? 'Edit customer'
+                : 'Add new customer'
+            }
+            close={() => {
+              setShowAdd(false)
+              setEditingCustomer(null)
+            }}
           >
             <CustomerForm
-              close={() => setShowAdd(false)}
-              onSave={(c) => {
-                setCustomers([c, ...customers])
-                load()
+              customer={editingCustomer}
+              close={() => {
+                setShowAdd(false)
+                setEditingCustomer(null)
               }}
+              onSave={
+                editingCustomer
+                  ? handleUpdate
+                  : handleCreate
+              }
             />
           </Modal>
         )}
@@ -805,6 +1029,9 @@ function Customers({
   setFilter,
   add,
   setSelected,
+  onEdit,
+  onDelete,
+  onRefresh,
 }) {
   return (
     <>
@@ -836,25 +1063,27 @@ function Customers({
           <option>Renewal</option>
           <option>Tatkal</option>
         </select>
-
+        {/* 
         <button className="primary" onClick={add}>
           <Plus size={17} />
           Add customer
-        </button>
+        </button> */}
       </div>
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table>
-            <thead>
+            <thead className="bg-slate-50 text-center">
               <tr>
-                <th>File number</th>
+                <th>Passport File Number</th>
+                <th>Passport ARN No</th>
+                {/* <th>Customer UID</th> */}
                 <th>Customer</th>
                 <th>Passport</th>
-                <th>Appointment</th>
+                {/* <th>Appointment</th> */}
                 <th>Status</th>
                 <th>Payment</th>
-                <th></th>
+                <th>CRUD</th>
               </tr>
             </thead>
 
@@ -864,10 +1093,15 @@ function Customers({
                   key={c._id}
                   onClick={() => setSelected(c)}
                 >
-                  <td className="font-semibold text-blue-700">
-                    {c.fileNumber}
+                  <td className="font-semibold  text-blue-700">
+                    {c.passportFileNumber}
                   </td>
-
+                  <td className="font-semibold text-blue-700">
+                    {c.passportArn}
+                  </td>
+                  {/* <td className="font-semibold text-blue-700">
+                    {c.fileNumber}
+                  </td> */}
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="avatar small">
@@ -885,13 +1119,16 @@ function Customers({
 
                   <td>{c.passportType}</td>
 
-                  <td>
+                  {/* <td>
                     {formatDate(c.appointmentDate)}
                     <br />
                     <span className="text-xs text-slate-400">
                       {c.appointmentTime || ''}
                     </span>
-                  </td>
+                    <span className="text-xs text-slate-400">
+                      {c.passportAmPm || ''}
+                    </span>
+                  </td> */}
 
                   <td>
                     <Status status={c.status} />
@@ -907,11 +1144,37 @@ function Customers({
                     </p>
                   </td>
 
-                  <td>
-                    <MoreHorizontal
-                      size={18}
-                      className="text-slate-400"
-                    />
+                  <td
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative"
+                  >
+                    <div className="flex items-center gap-1">
+
+                      <button
+                        onClick={() => setSelected(c)}
+                        className="icon"
+                        title="View customer"
+                      >
+                        <Eye size={17} />
+                      </button>
+
+                      <button
+                        onClick={() => onEdit(c)}
+                        className="icon"
+                        title="Edit customer"
+                      >
+                        <Pencil size={17} />
+                      </button>
+
+                      <button
+                        onClick={() => onDelete(c)}
+                        className="icon text-red-500 hover:bg-red-50"
+                        title="Delete customer"
+                      >
+                        <Trash2 size={17} />
+                      </button>
+
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1153,6 +1416,26 @@ function Appointments({ customers, setSelected }) {
 //     </div>
 //   )
 // }
+const getWhatsAppNumber = (mobile) => {
+    const number = String(mobile || '').replace(/\D/g, '')
+
+    // Already has India country code
+    if (number.startsWith('91') && number.length === 12) {
+      return number
+    }
+
+    // 10 digit Indian number
+    if (number.length === 10) {
+      return `91${number}`
+    }
+
+    // Number starts with 0, e.g. 09876543210
+    if (number.length === 11 && number.startsWith('0')) {
+      return `91${number.slice(1)}`
+    }
+
+    return number
+  }
 function Reminders({ customers }) {
   const upcoming = customers.filter((c) => {
     if (!c.appointmentDate) return false
@@ -1173,26 +1456,7 @@ function Reminders({ customers }) {
       }),
     })
 
-  const getWhatsAppNumber = (mobile) => {
-    const number = String(mobile || '').replace(/\D/g, '')
-
-    // Already has India country code
-    if (number.startsWith('91') && number.length === 12) {
-      return number
-    }
-
-    // 10 digit Indian number
-    if (number.length === 10) {
-      return `91${number}`
-    }
-
-    // Number starts with 0, e.g. 09876543210
-    if (number.length === 11 && number.startsWith('0')) {
-      return `91${number.slice(1)}`
-    }
-
-    return number
-  }
+  
 
   return (
     <div className="grid xl:grid-cols-3 gap-5">
@@ -1489,7 +1753,9 @@ function CustomerDetail({ customer, close, refresh }) {
         <a
           target="_blank"
           rel="noreferrer"
-          href={`https://wa.me/${customer.mobile}?text=${encodeURIComponent(
+          href={`https://wa.me/${getWhatsAppNumber(
+            customer.mobile,
+          )}?text=${encodeURIComponent(
             reminderMessage(customer),
           )}`}
           className="whatsapp px-4 py-2.5"
