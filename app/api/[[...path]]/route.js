@@ -103,6 +103,10 @@ export async function GET(request) {
         "fullName",
         "mobile",
         "passportType",
+        "passportAmPm",
+        "passportArn",
+        "passportFileNumber",
+        "passportOffice",
         "appointmentDate",
         "status",
         "totalAmount",
@@ -398,13 +402,193 @@ export async function PATCH(request) {
   }
 }
 
+// export async function DELETE(request) {
+//   const response = json({ ok: true });
+
+//   response.cookies.set("passport_session", "", {
+//     maxAge: 0,
+//     path: "/",
+//   });
+
+//   return response;
+// }
+export async function PUT(request) {
+  const denied = guard(request);
+
+  if (denied) return denied;
+
+  try {
+    const database = await db();
+    const { ObjectId } = require("mongodb");
+
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/");
+    const id = parts[parts.length - 1];
+
+    if (!id || id === "customers") {
+      return json(
+        {
+          error: "Customer ID is required",
+        },
+        400,
+      );
+    }
+
+    let objectId;
+
+    try {
+      objectId = ObjectId.createFromHexString(id);
+    } catch {
+      return json(
+        {
+          error: "Invalid customer ID",
+        },
+        400,
+      );
+    }
+
+    const body = await request.json();
+
+    const existingCustomer = await database
+      .collection("customers")
+      .findOne({
+        _id: objectId,
+      });
+
+    if (!existingCustomer) {
+      return json(
+        {
+          error: "Customer not found",
+        },
+        404,
+      );
+    }
+
+    const totalAmount = Number(
+      body.governmentFee ?? existingCustomer.governmentFee ?? 0,
+    );
+
+    const paidAmount = Number(
+      body.paidAmount ?? existingCustomer.paidAmount ?? 0,
+    );
+
+    const updatedCustomer = {
+      ...body,
+
+      // Never allow the frontend to change these
+      // identifiers.
+      fileNumber: existingCustomer.fileNumber,
+
+      // Recalculate payment values
+      totalAmount,
+      paidAmount,
+      balance: totalAmount - paidAmount,
+
+      // Preserve existing data when not provided
+      payments: body.payments ?? existingCustomer.payments ?? [],
+      documents: body.documents ?? existingCustomer.documents ?? [],
+      activity: [
+        ...(existingCustomer.activity || []),
+        {
+          type: "Customer Updated",
+          text: "Customer information updated",
+          at: new Date().toISOString(),
+        },
+      ],
+
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Don't let these accidentally overwrite MongoDB's _id
+    delete updatedCustomer._id;
+    delete updatedCustomer.createdAt;
+
+    await database.collection("customers").updateOne(
+      {
+        _id: objectId,
+      },
+      {
+        $set: updatedCustomer,
+      },
+    );
+
+    const customer = await database.collection("customers").findOne({
+      _id: objectId,
+    });
+
+    return json(safe(customer));
+  } catch (error) {
+    return json(
+      {
+        error: error.message || "Server error",
+      },
+      500,
+    );
+  }
+}
 export async function DELETE(request) {
-  const response = json({ ok: true });
+  const denied = guard(request);
 
-  response.cookies.set("passport_session", "", {
-    maxAge: 0,
-    path: "/",
-  });
+  if (denied) return denied;
 
-  return response;
+  try {
+    const database = await db();
+    const { ObjectId } = require("mongodb");
+
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/");
+    const id = parts[parts.length - 1];
+
+    if (!id || id === "customers") {
+      return json(
+        {
+          error: "Customer ID is required",
+        },
+        400,
+      );
+    }
+
+    let objectId;
+
+    try {
+      objectId = ObjectId.createFromHexString(id);
+    } catch {
+      return json(
+        {
+          error: "Invalid customer ID",
+        },
+        400,
+      );
+    }
+
+    const customer = await database.collection("customers").findOne({
+      _id: objectId,
+    });
+
+    if (!customer) {
+      return json(
+        {
+          error: "Customer not found",
+        },
+        404,
+      );
+    }
+
+    await database.collection("customers").deleteOne({
+      _id: objectId,
+    });
+
+    return json({
+      ok: true,
+      message: "Customer deleted successfully",
+      _id: id,
+    });
+  } catch (error) {
+    return json(
+      {
+        error: error.message || "Server error",
+      },
+      500,
+    );
+  }
 }
